@@ -152,7 +152,7 @@ class ClientMonitor:
                 return [row]
 
 
-def colorize(value, warning=70, critical=85, suffix='', width=6):
+def colorize(value, warning=70, critical=85, width=6, fmt='.1f'):
     """根据数值添加颜色"""
     if isinstance(value, str):
         return f"{value:>{width}}"
@@ -164,10 +164,13 @@ def colorize(value, warning=70, critical=85, suffix='', width=6):
         elif value >= warning:
             color = COLORS['yellow']
     
-    if suffix:
-        return f"{color}{value:>{width-len(suffix)}}{suffix}{COLORS['reset']}"
+    # 格式化数值
+    if isinstance(value, (int, float)):
+        value_str = f"{value:{fmt}}"
     else:
-        return f"{color}{value:>{width}}{COLORS['reset']}"
+        value_str = str(value)
+    
+    return f"{color}{value_str:>{width}}{COLORS['reset']}"
 
 
 def color_status(status):
@@ -184,7 +187,7 @@ def format_disk_io(read_mbps, write_mbps):
     """格式化磁盘IO显示"""
     if isinstance(read_mbps, str):
         return '-'
-    return f"{read_mbps:.1f}/{write_mbps:.1f}M"
+    return f"{read_mbps:.1f}/{write_mbps:.1f}"
 
 
 def clear_screen():
@@ -195,42 +198,42 @@ def clear_screen():
 def print_header(multi_gpu_mode='summary'):
     """打印表头"""
     if multi_gpu_mode == 'detail':
-        # 多GPU详细模式: IP Hostname CPU MEM Disk GPU# GPU GPU-Mem Temp Power Status
+        # 多GPU详细模式: IP Hostname CPU% MEM% Disk(M) GPU# GPU% GPU-Mem Temp Power(W) Status
         header = (
             f"{COLORS['bold']}{COLORS['cyan']}"
             f"{'IP':<16} "
             f"{'Hostname':<12} "
-            f"{'CPU':>6} "
-            f"{'MEM':>6} "
-            f"{'DiskR/W':>11} "
+            f"{'CPU%':>6} "
+            f"{'MEM%':>6} "
+            f"{'Disk(M)':>11} "
             f"{'GPU#':>4} "
-            f"{'GPU':>6} "
+            f"{'GPU%':>6} "
             f"{'GPU-Mem':>12} "
             f"{'Temp':>5} "
-            f"{'Power':>7} "
+            f"{'Power(W)':>8} "
             f"{'Status':<8}"
             f"{COLORS['reset']}"
         )
         print(header)
-        print("-" * 99)
+        print("-" * 100)
     else:
         # 汇总模式
         header = (
             f"{COLORS['bold']}{COLORS['cyan']}"
             f"{'IP':<16} "
             f"{'Hostname':<12} "
-            f"{'CPU':>6} "
-            f"{'MEM':>6} "
-            f"{'DiskR/W':>11} "
-            f"{'GPU':>6} "
+            f"{'CPU%':>6} "
+            f"{'MEM%':>6} "
+            f"{'Disk(M)':>11} "
+            f"{'GPU%':>6} "
             f"{'GPU-Mem':>12} "
             f"{'Temp':>5} "
-            f"{'Power':>7} "
+            f"{'Power(W)':>8} "
             f"{'Status':<8}"
             f"{COLORS['reset']}"
         )
         print(header)
-        print("-" * 94)
+        print("-" * 95)
 
 
 def print_client_row(data, multi_gpu_mode='summary'):
@@ -277,8 +280,8 @@ def print_client_row(data, multi_gpu_mode='summary'):
         else:
             ip_str = data['ip']
             hostname_str = data['hostname']
-            cpu_str = colorize(data['cpu'], 70, 85, '%', 6)
-            mem_str = colorize(data['mem'], 80, 90, '%', 6)
+            cpu_str = colorize(data['cpu'], 70, 85, 6, '.0f')
+            mem_str = colorize(data['mem'], 80, 90, 6, '.0f')
             disk_str = f"{format_disk_io(data['disk_read'], data['disk_write']):>11}"
         
         if multi_gpu_mode == 'detail':
@@ -289,23 +292,23 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{mem_str} "
                 f"{disk_str} "
                 f"{gpu_index_str:>4} "
-                f"{colorize(data['gpu'], 80, 95, '%', 6)} "
+                f"{colorize(data['gpu'], 80, 95, 6, '.0f')} "
                 f"{data['gpu_mem']:>12} "
-                f"{colorize(data['gpu_temp'], 70, 80, '', 5)} "
-                f"{colorize(data['gpu_power'], 200, 300, 'W', 7)} "
+                f"{colorize(data['gpu_temp'], 70, 80, 5, '.0f')} "
+                f"{colorize(data['gpu_power'], 200, 300, 8, '.1f')} "
                 f"{color_status(data['status'])}"
             )
         else:
             row = (
                 f"{data['ip']:<16} "
                 f"{data['hostname']:<12} "
-                f"{colorize(data['cpu'], 70, 85, '%', 6)} "
-                f"{colorize(data['mem'], 80, 90, '%', 6)} "
+                f"{colorize(data['cpu'], 70, 85, 6, '.0f')} "
+                f"{colorize(data['mem'], 80, 90, 6, '.0f')} "
                 f"{format_disk_io(data['disk_read'], data['disk_write']):>11} "
-                f"{colorize(data['gpu'], 80, 95, '%', 6)} "
+                f"{colorize(data['gpu'], 80, 95, 6, '.0f')} "
                 f"{data['gpu_mem']:>12} "
-                f"{colorize(data['gpu_temp'], 70, 80, '', 5)} "
-                f"{colorize(data['gpu_power'], 200, 300, 'W', 7)} "
+                f"{colorize(data['gpu_temp'], 70, 80, 5, '.0f')} "
+                f"{colorize(data['gpu_power'], 200, 300, 8, '.1f')} "
                 f"{color_status(data['status'])}"
             )
     print(row)
