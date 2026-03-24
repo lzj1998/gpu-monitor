@@ -116,6 +116,29 @@ def get_disk_io():
         }
 
 
+def get_network_io():
+    """获取网络IO速度"""
+    try:
+        # 获取网络IO计数器
+        net_before = psutil.net_io_counters()
+        time.sleep(0.5)  # 采样间隔
+        net_after = psutil.net_io_counters()
+        
+        # 计算速度 (MB/s)
+        recv_speed = (net_after.bytes_recv - net_before.bytes_recv) / 0.5 / 1024 / 1024
+        sent_speed = (net_after.bytes_sent - net_before.bytes_sent) / 0.5 / 1024 / 1024
+        
+        return {
+            'net_recv_mbps': round(recv_speed, 2),
+            'net_sent_mbps': round(sent_speed, 2)
+        }
+    except Exception as e:
+        return {
+            'net_recv_mbps': 0,
+            'net_sent_mbps': 0
+        }
+
+
 def get_system_info():
     """获取系统监控信息"""
     info = {
@@ -130,6 +153,9 @@ def get_system_info():
     
     # 合并磁盘IO信息
     info.update(get_disk_io())
+    
+    # 合并网络IO信息
+    info.update(get_network_io())
     
     return info
 
