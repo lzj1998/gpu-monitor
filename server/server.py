@@ -10,6 +10,7 @@ import json
 import sys
 import time
 import os
+import re
 from datetime import datetime
 from threading import Thread, Lock
 import argparse
@@ -194,15 +195,15 @@ def clear_screen():
 def print_header(multi_gpu_mode='summary'):
     """打印表头"""
     if multi_gpu_mode == 'detail':
-        # 多GPU详细模式
+        # 多GPU详细模式: IP Hostname CPU MEM Disk GPU# GPU GPU-Mem Temp Power Status
         header = (
             f"{COLORS['bold']}{COLORS['cyan']}"
             f"{'IP':<16} "
             f"{'Hostname':<12} "
-            f"{'GPU#':>4} "
             f"{'CPU':>6} "
             f"{'MEM':>6} "
             f"{'DiskR/W':>10} "
+            f"{'GPU#':>4} "
             f"{'GPU':>6} "
             f"{'GPU-Mem':>12} "
             f"{'Temp':>5} "
@@ -239,10 +240,10 @@ def print_client_row(data, multi_gpu_mode='summary'):
             row = (
                 f"{data['ip']:<16} "
                 f"{'-':<12} "
-                f"{'-':>4} "
                 f"{'-':>6} "
                 f"{'-':>6} "
                 f"{'-':>10} "
+                f"{'-':>4} "
                 f"{'-':>6} "
                 f"{'-':>12} "
                 f"{'-':>5} "
@@ -284,10 +285,10 @@ def print_client_row(data, multi_gpu_mode='summary'):
             row = (
                 f"{ip_str:<16} "
                 f"{hostname_str:<12} "
-                f"{gpu_index_str:>4} "
                 f"{cpu_str} "
                 f"{mem_str} "
                 f"{disk_str} "
+                f"{gpu_index_str:>4} "
                 f"{colorize(data['gpu'], 80, 95, '%', 6)} "
                 f"{data['gpu_mem']:>12} "
                 f"{colorize(data['gpu_temp'], 70, 80, '', 5)} "
@@ -310,17 +311,41 @@ def print_client_row(data, multi_gpu_mode='summary'):
     print(row)
 
 
-def load_ip_list(filepath):
-    """从文件加载IP列表"""
+def is_ip_address(text):
+    """检查是否是IP地址"""
+    # 简单检查是否包含IP格式的字符
+    ip_pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
+    return bool(ip_pattern.match(text))
+
+
+def parse_ip_list(source):
+    """解析IP列表，支持文件或直接输入IP"""
     ips = []
+    
+    # 检查是否是IP地址（直接输入）
+    if is_ip_address(source):
+        return [source]
+    
+    # 检查是否是逗号分隔的IP列表
+    if ',' in source:
+        parts = [p.strip() for p in source.split(',')]
+        for part in parts:
+            if is_ip_address(part):
+                ips.append(part)
+        if ips:
+            return ips
+    
+    # 尝试作为文件读取
     try:
-        with open(filepath, 'r') as f:
+        with open(source, 'r') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#'):
                     ips.append(line)
     except FileNotFoundError:
-        print(f"[!] 错误: 找不到文件 {filepath}")
+        print(f"[!] 错误: 找不到文件 '{source}'，且不是有效的IP地址")
+        print(f"[!] 提示: 可以直接输入IP地址，如: python server.py 192.168.1.100")
+        print(f"[!]       或多个IP用逗号分隔: python server.py 192.168.1.100,192.168.1.101")
         sys.exit(1)
     except Exception as e:
         print(f"[!] 错误: 读取文件失败 - {e}")
@@ -365,7 +390,7 @@ def monitor_loop(clients, multi_gpu_mode='summary'):
 
 def main():
     parser = argparse.ArgumentParser(description='GPU集群监控服务端')
-    parser.add_argument('ipfile', help='包含客户端IP列表的文件（每行一个IP）')
+    parser.add_argument('target', help='IP地址、逗号分隔的IP列表或IP列表文件')
     parser.add_argument('-p', '--port', type=int, default=DEFAULT_PORT,
                         help=f'客户端端口 (默认: {DEFAULT_PORT})')
     parser.add_argument('-i', '--interval', type=int, default=REFRESH_INTERVAL,
@@ -375,13 +400,13 @@ def main():
     
     args = parser.parse_args()
     
-    # 加载IP列表
-    ips = load_ip_list(args.ipfile)
+    # 解析IP列表
+    ips = parse_ip_list(args.target)
     if not ips:
-        print("[!] 错误: IP列表为空")
+        print("[!] 错误: 没有有效的IP地址")
         sys.exit(1)
     
-    print(f"[*] 加载了 {len(ips)} 个客户端IP")
+    print(f"[*] 加载了 {len(ips)} 个客户端IP: {', '.join(ips)}")
     print(f"[*] 多GPU模式: {args.multi_gpu}")
     print(f"[*] 正在初始化监控...")
     

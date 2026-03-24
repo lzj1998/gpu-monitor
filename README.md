@@ -62,28 +62,36 @@ python client/client.py -d
 
 ### 服务端（监控中心）
 
-1. 创建IP列表文件：
+**方式1：直接输入IP（机器少时方便）**
 ```bash
+# 单个IP
+python server/server.py 192.168.1.100
+
+# 多个IP用逗号分隔
+python server/server.py 192.168.1.100,192.168.1.101,192.168.1.102
+```
+
+**方式2：使用IP列表文件（机器多时推荐）**
+```bash
+# 创建IP列表文件
 cat > clients.txt << EOF
 192.168.1.101
 192.168.1.102
 192.168.1.103
 EOF
-```
 
-2. 启动监控（汇总模式，默认）：
-```bash
+# 启动监控
 python server/server.py clients.txt
 ```
 
-3. 多GPU详细模式（每个GPU单独一行）：
+**方式3：多GPU详细模式（每个GPU单独一行）**
 ```bash
-python server/server.py clients.txt -m detail
+python server/server.py 192.168.1.100 -m detail
 ```
 
-可选参数：
+**可选参数：**
 ```bash
-python server/server.py clients.txt -p 9527 -i 2 -m detail
+python server/server.py 192.168.1.100 -p 9527 -i 2 -m detail
 # -p: 客户端端口
 # -i: 刷新间隔秒数
 # -m: 多GPU模式 (summary/detail)
@@ -101,12 +109,12 @@ IP               Hostname      CPU%   MEM%   DiskR/W      GPU%    GPU-Mem    Tem
 
 ### 详细模式 (-m detail)
 ```
-IP               Hostname    GPU#  CPU%   MEM%   DiskR/W      GPU%    GPU-Mem    Temp  PowerW Status
+IP               Hostname      CPU%   MEM%   DiskR/W    GPU#   GPU%    GPU-Mem    Temp  PowerW Status
 ----------------------------------------------------------------------------------------------------
-192.168.1.101    server-01    0    25%    45%   12.5/3.2    80%    4.2G/12G    65°C   75W ONLINE
-192.168.1.101    server-01    1                              85%    4.3G/12G    68°C   78W ONLINE
+192.168.1.101    server-01     25%    45%   12.5/3.2     0    80%    4.2G/12G    65°C   75W ONLINE
+                                        1    85%    4.3G/12G    68°C   78W ONLINE
 ```
-每个GPU单独一行，CPU/内存/磁盘只在第一行显示，避免重复。
+每个GPU单独一行，IP/hostname/CPU/内存/磁盘只在第一行显示，GPU#放在磁盘和GPU利用率之间。
 
 ## 防火墙设置
 
