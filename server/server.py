@@ -268,18 +268,22 @@ def print_client_row(data, multi_gpu_mode='summary'):
         
         # 详细模式下，非第一行的系统指标显示为空
         if multi_gpu_mode == 'detail' and not is_first_row:
+            ip_str = ' '
+            hostname_str = ' '
             cpu_str = ' '
             mem_str = ' '
             disk_str = ' '
         else:
+            ip_str = data['ip']
+            hostname_str = data['hostname']
             cpu_str = colorize(data['cpu'], 70, 85, '%', 6)
             mem_str = colorize(data['mem'], 80, 90, '%', 6)
             disk_str = f"{format_disk_io(data['disk_read'], data['disk_write']):>10}"
         
         if multi_gpu_mode == 'detail':
             row = (
-                f"{data['ip']:<16} "
-                f"{data['hostname']:<12} "
+                f"{ip_str:<16} "
+                f"{hostname_str:<12} "
                 f"{gpu_index_str:>4} "
                 f"{cpu_str} "
                 f"{mem_str} "
