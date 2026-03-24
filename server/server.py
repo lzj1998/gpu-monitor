@@ -368,11 +368,27 @@ def parse_ip_list(source):
     return ips
 
 
+def move_cursor_to_top():
+    """移动光标到顶部"""
+    # 使用ANSI转义码移动光标到顶部
+    print('\033[H', end='')
+
+
+def clear_screen_once():
+    """只清屏一次"""
+    os.system('clear' if os.name != 'nt' else 'cls')
+
+
 def monitor_loop(clients, multi_gpu_mode='summary'):
     """监控主循环"""
+    first_run = True
     try:
         while True:
-            clear_screen()
+            if first_run:
+                clear_screen_once()
+                first_run = False
+            else:
+                move_cursor_to_top()
             
             # 打印标题（去掉框线竖线）
             print(f"{COLORS['bold']}{COLORS['magenta']}")
