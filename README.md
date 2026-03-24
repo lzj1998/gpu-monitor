@@ -21,12 +21,11 @@
 | GPU# | GPU序号 | 多GPU详细模式下显示 |
 | CPU% | CPU使用率 | >70%黄色, >85%红色 |
 | MEM% | 内存使用率 | >80%黄色, >90%红色 |
+| DiskR/W | 磁盘读写 | MB/s，格式: 读/写 |
 | GPU% | GPU利用率 | >80%黄色, >95%红色 |
 | GPU-Mem | GPU显存 | 格式: 已用/总量 (如: 8.5G/24G) |
 | Temp | GPU温度 | >70°C黄色, >80°C红色 |
 | Power | GPU功耗 | >200W黄色, >300W红色 |
-| DiskR | 磁盘读取 | MB/s |
-| DiskW | 磁盘写入 | MB/s |
 | Status | 连接状态 | ONLINE/TIMEOUT/ERROR |
 
 ## 安装
@@ -94,20 +93,20 @@ python server/server.py clients.txt -p 9527 -i 2 -m detail
 
 ### 汇总模式 (-m summary)
 ```
-IP               Hostname      CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW Status
---------------------------------------------------------------------------------------------------
-192.168.1.101    server-01     25%    45%    80%    8.5G/24G    65°C   150W   12.5   3.2 ONLINE
+IP               Hostname      CPU%   MEM%   DiskR/W      GPU%    GPU-Mem    Temp  PowerW Status
+-------------------------------------------------------------------------------------------------
+192.168.1.101    server-01     25%    45%   12.5/3.2    80%    8.5G/24G    65°C   150W ONLINE
 ```
 多GPU时显示平均值。
 
 ### 详细模式 (-m detail)
 ```
-IP               Hostname    GPU#  CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW Status
------------------------------------------------------------------------------------------------------
-192.168.1.101    server-01    0    25%    45%    80%    4.2G/12G    65°C   75W   12.5   3.2 ONLINE
-192.168.1.101    server-01    1    25%    45%    85%    4.3G/12G    68°C   78W   12.5   3.2 ONLINE
+IP               Hostname    GPU#  CPU%   MEM%   DiskR/W      GPU%    GPU-Mem    Temp  PowerW Status
+----------------------------------------------------------------------------------------------------
+192.168.1.101    server-01    0    25%    45%   12.5/3.2    80%    4.2G/12G    65°C   75W ONLINE
+192.168.1.101    server-01    1                              85%    4.3G/12G    68°C   78W ONLINE
 ```
-每个GPU单独一行，方便查看单个GPU状态。
+每个GPU单独一行，CPU/内存/磁盘只在第一行显示，避免重复。
 
 ## 防火墙设置
 

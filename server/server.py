@@ -101,15 +101,14 @@ class ClientMonitor:
                     'hostname': '-',
                     'cpu': '-',
                     'mem': '-',
+                    'disk_io': '-',
                     'gpu': '-',
                     'gpu_mem': '-',
                     'gpu_temp': '-',
                     'gpu_power': '-',
-                    'disk_read': '-',
-                    'disk_write': '-',
-                    'load1': '-',
                     'status': self.status,
-                    'gpu_index': None
+                    'gpu_index': None,
+                    'is_first_row': True
                 }]
             
             base_data = {
@@ -135,6 +134,7 @@ class ClientMonitor:
                     row['gpu_temp'] = gpu.get('temp', 0)
                     row['gpu_power'] = gpu.get('power', 0)
                     row['gpu_index'] = gpu.get('index', i)
+                    row['is_first_row'] = (i == 0)  # 标记第一行
                     result.append(row)
                 return result
             else:
@@ -147,6 +147,7 @@ class ClientMonitor:
                 row['gpu_temp'] = self.data.get('gpu_temp', 0)
                 row['gpu_power'] = self.data.get('gpu_power', 0)
                 row['gpu_index'] = None
+                row['is_first_row'] = True
                 return [row]
 
 
@@ -178,6 +179,13 @@ def color_status(status):
         return f"{COLORS['yellow']}{status:<8}{COLORS['reset']}"
 
 
+def format_disk_io(read_mbps, write_mbps):
+    """格式化磁盘IO显示"""
+    if isinstance(read_mbps, str):
+        return '-'
+    return f"{read_mbps:.1f}/{write_mbps:.1f}"
+
+
 def clear_screen():
     """清屏"""
     os.system('clear' if os.name != 'nt' else 'cls')
@@ -186,7 +194,7 @@ def clear_screen():
 def print_header(multi_gpu_mode='summary'):
     """打印表头"""
     if multi_gpu_mode == 'detail':
-        # 多GPU详细模式，显示GPU序号
+        # 多GPU详细模式
         header = (
             f"{COLORS['bold']}{COLORS['cyan']}"
             f"{'IP':<16} "
@@ -194,17 +202,16 @@ def print_header(multi_gpu_mode='summary'):
             f"{'GPU#':>4} "
             f"{'CPU':>6} "
             f"{'MEM':>6} "
+            f"{'DiskR/W':>10} "
             f"{'GPU':>6} "
             f"{'GPU-Mem':>12} "
             f"{'Temp':>5} "
             f"{'Power':>7} "
-            f"{'DiskR':>7} "
-            f"{'DiskW':>7} "
             f"{'Status':<8}"
             f"{COLORS['reset']}"
         )
         print(header)
-        print("-" * 105)
+        print("-" * 98)
     else:
         # 汇总模式
         header = (
@@ -213,17 +220,16 @@ def print_header(multi_gpu_mode='summary'):
             f"{'Hostname':<12} "
             f"{'CPU':>6} "
             f"{'MEM':>6} "
+            f"{'DiskR/W':>10} "
             f"{'GPU':>6} "
             f"{'GPU-Mem':>12} "
             f"{'Temp':>5} "
             f"{'Power':>7} "
-            f"{'DiskR':>7} "
-            f"{'DiskW':>7} "
             f"{'Status':<8}"
             f"{COLORS['reset']}"
         )
         print(header)
-        print("-" * 100)
+        print("-" * 93)
 
 
 def print_client_row(data, multi_gpu_mode='summary'):
@@ -236,11 +242,10 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{'-':>4} "
                 f"{'-':>6} "
                 f"{'-':>6} "
+                f"{'-':>10} "
                 f"{'-':>6} "
                 f"{'-':>12} "
                 f"{'-':>5} "
-                f"{'-':>7} "
-                f"{'-':>7} "
                 f"{'-':>7} "
                 f"{color_status(data['status'])}"
             )
@@ -250,30 +255,39 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{'-':<12} "
                 f"{'-':>6} "
                 f"{'-':>6} "
+                f"{'-':>10} "
                 f"{'-':>6} "
                 f"{'-':>12} "
                 f"{'-':>5} "
-                f"{'-':>7} "
-                f"{'-':>7} "
                 f"{'-':>7} "
                 f"{color_status(data['status'])}"
             )
     else:
         gpu_index_str = str(data.get('gpu_index', '')) if data.get('gpu_index') is not None else '-'
+        is_first_row = data.get('is_first_row', True)
+        
+        # 详细模式下，非第一行的系统指标显示为空
+        if multi_gpu_mode == 'detail' and not is_first_row:
+            cpu_str = ' '
+            mem_str = ' '
+            disk_str = ' '
+        else:
+            cpu_str = colorize(data['cpu'], 70, 85, '%', 6)
+            mem_str = colorize(data['mem'], 80, 90, '%', 6)
+            disk_str = f"{format_disk_io(data['disk_read'], data['disk_write']):>10}"
         
         if multi_gpu_mode == 'detail':
             row = (
                 f"{data['ip']:<16} "
                 f"{data['hostname']:<12} "
                 f"{gpu_index_str:>4} "
-                f"{colorize(data['cpu'], 70, 85, '%', 6)} "
-                f"{colorize(data['mem'], 80, 90, '%', 6)} "
+                f"{cpu_str} "
+                f"{mem_str} "
+                f"{disk_str} "
                 f"{colorize(data['gpu'], 80, 95, '%', 6)} "
                 f"{data['gpu_mem']:>12} "
                 f"{colorize(data['gpu_temp'], 70, 80, '', 5)} "
                 f"{colorize(data['gpu_power'], 200, 300, 'W', 7)} "
-                f"{data['disk_read']:>6.1f} "
-                f"{data['disk_write']:>6.1f} "
                 f"{color_status(data['status'])}"
             )
         else:
@@ -282,12 +296,11 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{data['hostname']:<12} "
                 f"{colorize(data['cpu'], 70, 85, '%', 6)} "
                 f"{colorize(data['mem'], 80, 90, '%', 6)} "
+                f"{format_disk_io(data['disk_read'], data['disk_write']):>10} "
                 f"{colorize(data['gpu'], 80, 95, '%', 6)} "
                 f"{data['gpu_mem']:>12} "
                 f"{colorize(data['gpu_temp'], 70, 80, '', 5)} "
                 f"{colorize(data['gpu_power'], 200, 300, 'W', 7)} "
-                f"{data['disk_read']:>6.1f} "
-                f"{data['disk_write']:>6.1f} "
                 f"{color_status(data['status'])}"
             )
     print(row)
@@ -318,13 +331,11 @@ def monitor_loop(clients, multi_gpu_mode='summary'):
         while True:
             clear_screen()
             
-            # 打印标题
+            # 打印标题（去掉框线竖线）
             print(f"{COLORS['bold']}{COLORS['magenta']}")
-            print("╔══════════════════════════════════════════════════════════════════════════════╗")
             mode_str = "[多GPU详细模式]" if multi_gpu_mode == 'detail' else "[汇总模式]"
-            print(f"║                    GPU Cluster Monitor v1.1  {mode_str:<25}     ║")
-            print(f"║                    {datetime.now().strftime('%Y-%m-%d %H:%M:%S'):<47}     ║")
-            print("╚══════════════════════════════════════════════════════════════════════════════╝")
+            print(f" GPU Cluster Monitor v1.2  {mode_str}")
+            print(f" {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             print(f"{COLORS['reset']}")
             
             print_header(multi_gpu_mode)
@@ -336,9 +347,9 @@ def monitor_loop(clients, multi_gpu_mode='summary'):
                     print_client_row(data, multi_gpu_mode)
             
             if multi_gpu_mode == 'detail':
-                print("-" * 105)
+                print("-" * 98)
             else:
-                print("-" * 100)
+                print("-" * 93)
             print(f"\n按 Ctrl+C 退出 | 模式: {multi_gpu_mode} | 客户端数: {len(clients)}")
             
             # 等待刷新
