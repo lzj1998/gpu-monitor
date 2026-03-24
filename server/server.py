@@ -117,7 +117,6 @@ class ClientMonitor:
                 'hostname': self.data.get('hostname', '-')[:12],
                 'cpu': self.data.get('cpu_percent', 0),
                 'mem': self.data.get('memory_percent', 0),
-                'load1': self.data.get('load1', 0),
                 'disk_read': self.data.get('disk_read_mbps', 0),
                 'disk_write': self.data.get('disk_write_mbps', 0),
                 'status': 'ONLINE'
@@ -201,12 +200,11 @@ def print_header(multi_gpu_mode='summary'):
             f"{'Power':>7} "
             f"{'DiskR':>7} "
             f"{'DiskW':>7} "
-            f"{'Load':>5} "
             f"{'Status':<8}"
             f"{COLORS['reset']}"
         )
         print(header)
-        print("-" * 110)
+        print("-" * 105)
     else:
         # 汇总模式
         header = (
@@ -221,12 +219,11 @@ def print_header(multi_gpu_mode='summary'):
             f"{'Power':>7} "
             f"{'DiskR':>7} "
             f"{'DiskW':>7} "
-            f"{'Load':>5} "
             f"{'Status':<8}"
             f"{COLORS['reset']}"
         )
         print(header)
-        print("-" * 105)
+        print("-" * 100)
 
 
 def print_client_row(data, multi_gpu_mode='summary'):
@@ -245,7 +242,6 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{'-':>7} "
                 f"{'-':>7} "
                 f"{'-':>7} "
-                f"{'-':>5} "
                 f"{color_status(data['status'])}"
             )
         else:
@@ -260,7 +256,6 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{'-':>7} "
                 f"{'-':>7} "
                 f"{'-':>7} "
-                f"{'-':>5} "
                 f"{color_status(data['status'])}"
             )
     else:
@@ -279,7 +274,6 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{colorize(data['gpu_power'], 200, 300, 'W', 7)} "
                 f"{data['disk_read']:>6.1f} "
                 f"{data['disk_write']:>6.1f} "
-                f"{data['load1']:>4.1f} "
                 f"{color_status(data['status'])}"
             )
         else:
@@ -294,7 +288,6 @@ def print_client_row(data, multi_gpu_mode='summary'):
                 f"{colorize(data['gpu_power'], 200, 300, 'W', 7)} "
                 f"{data['disk_read']:>6.1f} "
                 f"{data['disk_write']:>6.1f} "
-                f"{data['load1']:>4.1f} "
                 f"{color_status(data['status'])}"
             )
     print(row)
@@ -343,9 +336,9 @@ def monitor_loop(clients, multi_gpu_mode='summary'):
                     print_client_row(data, multi_gpu_mode)
             
             if multi_gpu_mode == 'detail':
-                print("-" * 110)
-            else:
                 print("-" * 105)
+            else:
+                print("-" * 100)
             print(f"\n按 Ctrl+C 退出 | 模式: {multi_gpu_mode} | 客户端数: {len(clients)}")
             
             # 等待刷新

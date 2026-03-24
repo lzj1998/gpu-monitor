@@ -27,7 +27,6 @@
 | Power | GPU功耗 | >200W黄色, >300W红色 |
 | DiskR | 磁盘读取 | MB/s |
 | DiskW | 磁盘写入 | MB/s |
-| Load | 1分钟负载 | |
 | Status | 连接状态 | ONLINE/TIMEOUT/ERROR |
 
 ## 安装
@@ -95,18 +94,18 @@ python server/server.py clients.txt -p 9527 -i 2 -m detail
 
 ### 汇总模式 (-m summary)
 ```
-IP               Hostname      CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW  Load Status
------------------------------------------------------------------------------------------------------------
-192.168.1.101    server-01     25%    45%    80%    8.5G/24G    65°C   150W   12.5   3.2   1.2 ONLINE
+IP               Hostname      CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW Status
+--------------------------------------------------------------------------------------------------
+192.168.1.101    server-01     25%    45%    80%    8.5G/24G    65°C   150W   12.5   3.2 ONLINE
 ```
 多GPU时显示平均值。
 
 ### 详细模式 (-m detail)
 ```
-IP               Hostname    GPU#  CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW  Load Status
---------------------------------------------------------------------------------------------------------------
-192.168.1.101    server-01    0    25%    45%    80%    4.2G/12G    65°C   75W   12.5   3.2   1.2 ONLINE
-192.168.1.101    server-01    1    25%    45%    85%    4.3G/12G    68°C   78W   12.5   3.2   1.2 ONLINE
+IP               Hostname    GPU#  CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW Status
+-----------------------------------------------------------------------------------------------------
+192.168.1.101    server-01    0    25%    45%    80%    4.2G/12G    65°C   75W   12.5   3.2 ONLINE
+192.168.1.101    server-01    1    25%    45%    85%    4.3G/12G    68°C   78W   12.5   3.2 ONLINE
 ```
 每个GPU单独一行，方便查看单个GPU状态。
 

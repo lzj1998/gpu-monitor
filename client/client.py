@@ -122,7 +122,6 @@ def get_system_info():
         'hostname': socket.gethostname(),
         'cpu_percent': psutil.cpu_percent(interval=0.5),
         'memory_percent': psutil.virtual_memory().percent,
-        'load1': os.getloadavg()[0] if hasattr(os, 'getloadavg') else 0,
         'timestamp': time.time()
     }
     
