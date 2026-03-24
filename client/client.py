@@ -11,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+import os
 
 # 配置
 DEFAULT_PORT = 9527
@@ -18,40 +19,101 @@ BUFFER_SIZE = 4096
 
 
 def get_gpu_info():
-    """获取NVIDIA GPU信息"""
+    """获取NVIDIA GPU信息 - 支持多GPU"""
     gpu_info = {
-        'gpu_util': 0,
-        'gpu_mem_util': 0,
-        'gpu_temp': 0,
-        'gpu_power': 0,
-        'gpu_count': 0
+        'gpu_count': 0,
+        'gpus': []  # 每个GPU的详细信息
     }
     
     try:
-        # 使用nvidia-smi获取GPU信息
+        # 使用nvidia-smi获取所有GPU信息
         result = subprocess.run(
-            ['nvidia-smi', '--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,count',
+            ['nvidia-smi', '--query-gpu=index,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw',
              '--format=csv,noheader,nounits'],
             capture_output=True, text=True, timeout=5
         )
         
         if result.returncode == 0:
             lines = result.stdout.strip().split('\n')
-            if lines and lines[0]:
-                # 取第一个GPU的数据
-                parts = [p.strip() for p in lines[0].split(',')]
-                if len(parts) >= 5:
-                    gpu_info['gpu_util'] = float(parts[0]) if parts[0] else 0
-                    mem_used = float(parts[1]) if parts[1] else 0
-                    mem_total = float(parts[2]) if parts[2] else 1
-                    gpu_info['gpu_mem_util'] = (mem_used / mem_total * 100) if mem_total > 0 else 0
-                    gpu_info['gpu_temp'] = float(parts[3]) if parts[3] else 0
-                    gpu_info['gpu_power'] = float(parts[4]) if parts[4] else 0
-                    gpu_info['gpu_count'] = int(parts[5]) if len(parts) > 5 and parts[5] else len(lines)
+            gpus = []
+            total_util = 0
+            total_mem_used = 0
+            total_mem_total = 0
+            total_temp = 0
+            total_power = 0
+            
+            for line in lines:
+                if not line.strip():
+                    continue
+                parts = [p.strip() for p in line.split(',')]
+                if len(parts) >= 6:
+                    gpu_data = {
+                        'index': int(parts[0]) if parts[0] else 0,
+                        'util': float(parts[1]) if parts[1] else 0,
+                        'mem_used': float(parts[2]) if parts[2] else 0,
+                        'mem_total': float(parts[3]) if parts[3] else 0,
+                        'temp': float(parts[4]) if parts[4] else 0,
+                        'power': float(parts[5]) if parts[5] else 0
+                    }
+                    gpus.append(gpu_data)
+                    
+                    # 计算汇总值
+                    total_util += gpu_data['util']
+                    total_mem_used += gpu_data['mem_used']
+                    total_mem_total += gpu_data['mem_total']
+                    total_temp += gpu_data['temp']
+                    total_power += gpu_data['power']
+            
+            gpu_count = len(gpus)
+            gpu_info['gpu_count'] = gpu_count
+            gpu_info['gpus'] = gpus
+            
+            # 汇总数据（用于单GPU模式显示）
+            if gpu_count > 0:
+                gpu_info['gpu_util'] = total_util / gpu_count
+                gpu_info['gpu_mem_used'] = total_mem_used  # MB
+                gpu_info['gpu_mem_total'] = total_mem_total  # MB
+                gpu_info['gpu_temp'] = total_temp / gpu_count
+                gpu_info['gpu_power'] = total_power
+            else:
+                gpu_info['gpu_util'] = 0
+                gpu_info['gpu_mem_used'] = 0
+                gpu_info['gpu_mem_total'] = 0
+                gpu_info['gpu_temp'] = 0
+                gpu_info['gpu_power'] = 0
+                
     except Exception as e:
-        pass  # GPU不可用
+        # GPU不可用，使用默认值
+        gpu_info['gpu_util'] = 0
+        gpu_info['gpu_mem_used'] = 0
+        gpu_info['gpu_mem_total'] = 0
+        gpu_info['gpu_temp'] = 0
+        gpu_info['gpu_power'] = 0
     
     return gpu_info
+
+
+def get_disk_io():
+    """获取磁盘IO速度"""
+    try:
+        # 获取磁盘IO计数器
+        disk_before = psutil.disk_io_counters()
+        time.sleep(0.5)  # 采样间隔
+        disk_after = psutil.disk_io_counters()
+        
+        # 计算速度 (MB/s)
+        read_speed = (disk_after.read_bytes - disk_before.read_bytes) / 0.5 / 1024 / 1024
+        write_speed = (disk_after.write_bytes - disk_before.write_bytes) / 0.5 / 1024 / 1024
+        
+        return {
+            'disk_read_mbps': round(read_speed, 2),
+            'disk_write_mbps': round(write_speed, 2)
+        }
+    except Exception as e:
+        return {
+            'disk_read_mbps': 0,
+            'disk_write_mbps': 0
+        }
 
 
 def get_system_info():
@@ -66,6 +128,9 @@ def get_system_info():
     
     # 合并GPU信息
     info.update(get_gpu_info())
+    
+    # 合并磁盘IO信息
+    info.update(get_disk_io())
     
     return info
 
@@ -116,8 +181,6 @@ def start_client(port=DEFAULT_PORT):
 
 
 if __name__ == '__main__':
-    import os
-    
     # 检查后台运行参数
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         # 后台运行

@@ -1,12 +1,14 @@
 # GPU集群监控系统
 
-一个简单的GPU集群监控工具，支持实时监控多台Linux服务器的CPU、内存和NVIDIA GPU状态。
+一个简单的GPU集群监控工具，支持实时监控多台Linux服务器的CPU、内存、NVIDIA GPU状态和磁盘IO。
 
 ## 功能特性
 
 - **实时监控**: 1秒刷新一次，实时显示集群状态
 - **彩色显示**: 根据阈值自动着色（绿色正常、黄色警告、红色危险）
 - **GPU支持**: 支持NVIDIA GPU监控（利用率、显存、温度、功耗）
+- **多GPU模式**: 支持汇总显示或分开显示每个GPU
+- **磁盘IO**: 实时监控磁盘读写速度
 - **轻量级**: 纯Python实现，依赖少
 - **后台运行**: 客户端可后台运行，不占用终端
 
@@ -16,13 +18,16 @@
 |---|---|---|
 | IP | 客户端IP地址 | |
 | Hostname | 主机名 | 截断显示前12字符 |
+| GPU# | GPU序号 | 多GPU详细模式下显示 |
 | CPU% | CPU使用率 | >70%黄色, >85%红色 |
 | MEM% | 内存使用率 | >80%黄色, >90%红色 |
 | GPU% | GPU利用率 | >80%黄色, >95%红色 |
-| GPU-Mem% | GPU显存使用率 | >80%黄色, >95%红色 |
+| GPU-Mem | GPU显存 | 格式: 已用/总量 (如: 8.5G/24G) |
 | Temp | GPU温度 | >70°C黄色, >80°C红色 |
 | Power | GPU功耗 | >200W黄色, >300W红色 |
-| Load1 | 1分钟负载 | |
+| DiskR | 磁盘读取 | MB/s |
+| DiskW | 磁盘写入 | MB/s |
+| Load | 1分钟负载 | |
 | Status | 连接状态 | ONLINE/TIMEOUT/ERROR |
 
 ## 安装
@@ -68,15 +73,42 @@ cat > clients.txt << EOF
 EOF
 ```
 
-2. 启动监控：
+2. 启动监控（汇总模式，默认）：
 ```bash
 python server/server.py clients.txt
 ```
 
+3. 多GPU详细模式（每个GPU单独一行）：
+```bash
+python server/server.py clients.txt -m detail
+```
+
 可选参数：
 ```bash
-python server/server.py clients.txt -p 9527 -i 2  # 自定义端口和刷新间隔
+python server/server.py clients.txt -p 9527 -i 2 -m detail
+# -p: 客户端端口
+# -i: 刷新间隔秒数
+# -m: 多GPU模式 (summary/detail)
 ```
+
+## 显示模式对比
+
+### 汇总模式 (-m summary)
+```
+IP               Hostname      CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW  Load Status
+-----------------------------------------------------------------------------------------------------------
+192.168.1.101    server-01     25%    45%    80%    8.5G/24G    65°C   150W   12.5   3.2   1.2 ONLINE
+```
+多GPU时显示平均值。
+
+### 详细模式 (-m detail)
+```
+IP               Hostname    GPU#  CPU%   MEM%   GPU%    GPU-Mem    Temp  PowerW  DiskR  DiskW  Load Status
+--------------------------------------------------------------------------------------------------------------
+192.168.1.101    server-01    0    25%    45%    80%    4.2G/12G    65°C   75W   12.5   3.2   1.2 ONLINE
+192.168.1.101    server-01    1    25%    45%    85%    4.3G/12G    68°C   78W   12.5   3.2   1.2 ONLINE
+```
+每个GPU单独一行，方便查看单个GPU状态。
 
 ## 防火墙设置
 
@@ -118,7 +150,8 @@ gpu-monitor/
 1. 客户端和服务端默认使用 **9527** 端口通信
 2. 确保服务端可以访问客户端的9527端口
 3. 客户端需要安装NVIDIA驱动才能获取GPU信息
-4. 无GPU的机器GPU相关指标显示为0
+4. 无GPU的机器GPU相关指标显示为0或-
+5. 磁盘IO采样间隔为0.5秒，显示的是实时速度(MB/s)
 
 ## License
 
