@@ -11,6 +11,7 @@
 - **磁盘IO**: 实时监控磁盘读写速度
 - **轻量级**: 纯Python实现，依赖少
 - **后台运行**: 客户端可后台运行，不占用终端
+- **Docker支持**: 客户端支持Docker部署，无需Python环境
 
 ## 监控指标
 
@@ -60,6 +61,30 @@ python client/client.py -d
 ```
 
 后台运行时会将日志写入 `/tmp/gpu-monitor-client.log`
+
+#### Docker 运行（无需Python环境）
+
+```bash
+cd client
+
+# 构建镜像
+docker build -t gpu-monitor-client .
+
+# 运行容器（带GPU监控）
+docker run -d \
+  --name gpu-monitor-client \
+  --network host \
+  --gpus all \
+  gpu-monitor-client
+
+# 运行容器（无GPU）
+docker run -d \
+  --name gpu-monitor-client \
+  --network host \
+  gpu-monitor-client
+```
+
+详细说明见 [client/README.docker.md](client/README.docker.md)
 
 ### 服务端（监控中心）
 
@@ -145,7 +170,9 @@ kill <PID>
 gpu-monitor/
 ├── client/
 │   ├── client.py          # 客户端主程序
-│   └── requirements.txt   # 客户端依赖
+│   ├── requirements.txt   # 客户端依赖
+│   ├── Dockerfile         # Docker镜像配置
+│   └── README.docker.md   # Docker部署文档
 ├── server/
 │   ├── server.py          # 服务端主程序
 │   └── requirements.txt   # 服务端依赖
@@ -156,9 +183,10 @@ gpu-monitor/
 
 1. 客户端和服务端默认使用 **9527** 端口通信
 2. 确保服务端可以访问客户端的9527端口
-3. 客户端需要安装NVIDIA驱动才能获取GPU信息
+3. 客户端需要安装NVIDIA驱动才能获取GPU信息（Docker部署需安装NVIDIA Container Toolkit）
 4. 无GPU的机器GPU相关指标显示为0或-
 5. 磁盘IO采样间隔为0.5秒，显示的是实时速度(MB/s)
+6. Docker运行时使用 `--network host` 模式，确保服务端能访问到客户端
 
 ## License
 
